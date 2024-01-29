@@ -1,0 +1,49 @@
+import paramiko
+import time
+import getpass
+import sys
+import socket
+###执行文件，需要加上ip_list.txt command_h3c.txt这两个txt文件
+username = input('username:')
+password = getpass.getpass('password:')
+ip_list = sys.argv[1]
+cmd_file = sys.argv[2]
+
+switch_with_authentication_issue = []
+switch_not_reachable = []
+
+ip_list = open("ip_list.txt")
+
+for line in ip_list.readlines():
+    try:
+        ip = line.strip()
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname=ip, username=username,password=password,look_for_keys=False)
+        print ("Susscessfully connect to ",ip)
+        command = ssh_client.invoke_shell()
+        cmdlist = open("command_h3c.txt")
+        cmdlist.seek(0)
+        for line in cmdlist.readlines():
+            command.send(line + "\n")
+        time.sleep(1)
+        cmdlist.close()
+        output = command.recv(65535)
+        print (output.decode("ascii"))
+    except paramiko.ssh_exception.AuthenticationException:
+        print ("User authentication failed for " + ip +".")
+        switch_with_authentication_issue.append(ip)
+    except socket.error:
+        print ( ip + "is not reachable.")
+        switch_not_reachable.append(ip)
+
+ip_list.close()
+ssh_client.close
+
+print ('\n User authentication failed for below switches:')
+for i in switch_with_authentication_issue:
+    print (i)
+
+print ('\n Below switches are not reachables:')
+for i in switch_not_reachable:
+    print (i)
